@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:alpine
 
 WORKDIR /app
 RUN apk update && apk add --no-cache git ca-certificates tzdata && update-ca-certificates
