@@ -2,12 +2,11 @@ version: "3.8"
 
 services:
   server:
-    image: ghcr.io/divyam234/teldrive/server
+    image: ghcr.io/divyam234/teldrive
     restart: always
     container_name: teldrive
     volumes:
-      - ./teldrive.db:/app/teldrive.db:rw
-      - ./logs:/app/logs:rw
-    env_file: teldrive.env
+      - ./session.db:/session.db:rw
+      - ./config.toml:/config.toml
     ports:
       - 8080:8080

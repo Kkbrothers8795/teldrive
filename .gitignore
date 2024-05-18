@@ -29,3 +29,6 @@ sslcerts
 *.env.staging
 *.db
 logs
+bin
+ui/dist
+teldrive-ui.zip

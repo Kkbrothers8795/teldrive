@@ -1,6 +1,13 @@
 package kv
 
 import (
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/divyam234/teldrive/internal/config"
+	"github.com/divyam234/teldrive/internal/utils"
+	"github.com/mitchellh/go-homedir"
 	"go.etcd.io/bbolt"
 )
 
@@ -35,4 +42,35 @@ func (b *Bolt) Delete(key string) error {
 	return b.db.Update(func(tx *bbolt.Tx) error {
 		return tx.Bucket(b.bucket).Delete([]byte(key))
 	})
+}
+
+func NewBoltKV(cnf *config.Config) KV {
+
+	sessionFile := cnf.TG.SessionFile
+	if sessionFile == "" {
+		dir, err := homedir.Dir()
+		if err != nil {
+			dir = utils.ExecutableDir()
+		} else {
+			dir = filepath.Join(dir, ".teldrive")
+			err := os.Mkdir(dir, 0755)
+			if err != nil && !os.IsExist(err) {
+				dir = utils.ExecutableDir()
+			}
+		}
+		sessionFile = filepath.Join(dir, "session.db")
+	}
+	boltDB, err := bbolt.Open(sessionFile, 0666, &bbolt.Options{
+		Timeout:    time.Second,
+		NoGrowSync: false,
+	})
+	if err != nil {
+		panic(err)
+	}
+	kv, err := New(Options{Bucket: "teldrive", DB: boltDB})
+	if err != nil {
+		panic(err)
+	}
+
+	return kv
 }

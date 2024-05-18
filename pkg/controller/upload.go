@@ -2,8 +2,10 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/divyam234/teldrive/pkg/httputil"
+	"github.com/divyam234/teldrive/pkg/services"
 	"github.com/gin-gonic/gin"
 )
 
@@ -27,8 +29,8 @@ func (uc *Controller) DeleteUploadFile(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-func (uc *Controller) CreateUploadPart(c *gin.Context) {
-	res, err := uc.UploadService.CreateUploadPart(c)
+func (uc *Controller) UploadFile(c *gin.Context) {
+	res, err := uc.UploadService.UploadFile(c)
 	if err != nil {
 		httputil.NewError(c, err.Code, err.Error)
 		return
@@ -37,8 +39,16 @@ func (uc *Controller) CreateUploadPart(c *gin.Context) {
 	c.JSON(http.StatusCreated, res)
 }
 
-func (uc *Controller) UploadFile(c *gin.Context) {
-	res, err := uc.UploadService.UploadFile(c)
+func (uc *Controller) UploadStats(c *gin.Context) {
+	userId, _ := services.GetUserAuth(c)
+
+	days := 7
+
+	if c.Query("days") != "" {
+		days, _ = strconv.Atoi(c.Query("days"))
+	}
+
+	res, err := uc.UploadService.GetUploadStats(userId, days)
 	if err != nil {
 		httputil.NewError(c, err.Code, err.Error)
 		return

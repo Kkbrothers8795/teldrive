@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/divyam234/teldrive/config"
 	"github.com/divyam234/teldrive/internal/crypt"
 	"github.com/divyam234/teldrive/pkg/types"
 	"github.com/gotd/td/telegram"
@@ -13,26 +12,29 @@ import (
 type decrpytedReader struct {
 	ctx           context.Context
 	parts         []types.Part
+	ranges        []types.Range
 	pos           int
 	client        *telegram.Client
 	reader        io.ReadCloser
-	bytesread     int64
-	contentLength int64
-	config        *config.Config
+	limit         int64
+	err           error
+	encryptionKey string
 }
 
 func NewDecryptedReader(
 	ctx context.Context,
 	client *telegram.Client,
 	parts []types.Part,
-	contentLength int64) (io.ReadCloser, error) {
+	start, end int64,
+	encryptionKey string) (io.ReadCloser, error) {
 
 	r := &decrpytedReader{
 		ctx:           ctx,
 		parts:         parts,
 		client:        client,
-		contentLength: contentLength,
-		config:        config.GetConfig(),
+		limit:         end - start + 1,
+		ranges:        calculatePartByteRanges(start, end, parts[0].DecryptedSize),
+		encryptionKey: encryptionKey,
 	}
 	res, err := r.nextPart()
 
@@ -48,25 +50,31 @@ func NewDecryptedReader(
 
 func (r *decrpytedReader) Read(p []byte) (n int, err error) {
 
+	if r.err != nil {
+		return 0, r.err
+	}
+
+	if r.limit <= 0 {
+		return 0, io.EOF
+	}
+
 	n, err = r.reader.Read(p)
 
-	if err == io.EOF || n == 0 {
-		r.pos++
-		if r.pos < len(r.parts) {
-			r.reader, err = r.nextPart()
-			if err != nil {
-				return 0, err
-			}
+	if err == nil {
+		r.limit -= int64(n)
+	}
+
+	if err == io.EOF {
+		if r.limit > 0 {
+			err = nil
 		}
-
+		r.pos++
+		if r.pos < len(r.ranges) {
+			r.reader, err = r.nextPart()
+		}
 	}
-	r.bytesread += int64(n)
-
-	if r.bytesread == r.contentLength {
-		return n, io.EOF
-	}
-
-	return n, nil
+	r.err = err
+	return
 }
 
 func (r *decrpytedReader) Close() (err error) {
@@ -80,7 +88,11 @@ func (r *decrpytedReader) Close() (err error) {
 
 func (r *decrpytedReader) nextPart() (io.ReadCloser, error) {
 
-	cipher, _ := crypt.NewCipher(r.config.EncryptionKey, r.parts[r.pos].Salt)
+	location := r.parts[r.ranges[r.pos].PartNo].Location
+	start := r.ranges[r.pos].Start
+	end := r.ranges[r.pos].End
+	salt := r.parts[r.ranges[r.pos].PartNo].Salt
+	cipher, _ := crypt.NewCipher(r.encryptionKey, salt)
 
 	return cipher.DecryptDataSeek(r.ctx,
 		func(ctx context.Context,
@@ -90,14 +102,10 @@ func (r *decrpytedReader) nextPart() (io.ReadCloser, error) {
 			var end int64
 
 			if underlyingLimit >= 0 {
-				end = min(r.parts[r.pos].Size-1, underlyingOffset+underlyingLimit-1)
+				end = min(r.parts[r.ranges[r.pos].PartNo].Size-1, underlyingOffset+underlyingLimit-1)
 			}
 
-			return NewTGReader(r.ctx, r.client, types.Part{
-				Start:    underlyingOffset,
-				End:      end,
-				Location: r.parts[r.pos].Location,
-			})
-		}, r.parts[r.pos].Start, r.parts[r.pos].End-r.parts[r.pos].Start+1)
+			return newTGReader(r.ctx, r.client, location, underlyingOffset, end)
+		}, start, end-start+1)
 
 }

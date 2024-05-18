@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/divyam234/teldrive/pkg/types"
 	"github.com/gotd/td/telegram"
 	"github.com/gotd/td/tg"
 )
@@ -18,7 +17,7 @@ type tgReader struct {
 	end       int64
 	next      func() ([]byte, error)
 	buffer    []byte
-	bytesread int64
+	limit     int64
 	chunkSize int64
 	i         int64
 }
@@ -33,26 +32,33 @@ func calculateChunkSize(start, end int64) int64 {
 	return chunkSize
 }
 
-func NewTGReader(
+func newTGReader(
 	ctx context.Context,
 	client *telegram.Client,
-	part types.Part,
+	location *tg.InputDocumentFileLocation,
+	start int64,
+	end int64,
 
 ) (io.ReadCloser, error) {
 
 	r := &tgReader{
 		ctx:       ctx,
-		location:  part.Location,
+		location:  location,
 		client:    client,
-		start:     part.Start,
-		end:       part.End,
-		chunkSize: calculateChunkSize(part.Start, part.End),
+		start:     start,
+		end:       end,
+		chunkSize: calculateChunkSize(start, end),
+		limit:     end - start + 1,
 	}
 	r.next = r.partStream()
 	return r, nil
 }
 
 func (r *tgReader) Read(p []byte) (n int, err error) {
+
+	if r.limit <= 0 {
+		return 0, io.EOF
+	}
 
 	if r.i >= int64(len(r.buffer)) {
 		r.buffer, err = r.next()
@@ -71,12 +77,9 @@ func (r *tgReader) Read(p []byte) (n int, err error) {
 	}
 	n = copy(p, r.buffer[r.i:])
 	r.i += int64(n)
-	r.bytesread += int64(n)
+	r.limit -= int64(n)
 
-	if r.bytesread == r.end-r.start+1 {
-		return n, io.EOF
-	}
-	return n, nil
+	return
 }
 
 func (*tgReader) Close() error {

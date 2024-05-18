@@ -5,17 +5,19 @@ import (
 	"github.com/divyam234/teldrive/pkg/schemas"
 )
 
-func ToFileOut(file models.File) schemas.FileOut {
+func ToFileOut(file models.File) *schemas.FileOut {
 	var size int64
 	if file.Size != nil {
 		size = *file.Size
 	}
-	return schemas.FileOut{
+	return &schemas.FileOut{
 		ID:        file.ID,
 		Name:      file.Name,
 		Type:      file.Type,
 		MimeType:  file.MimeType,
+		Category:  file.Category,
 		Path:      file.Path,
+		Encrypted: file.Encrypted,
 		Size:      size,
 		Starred:   file.Starred,
 		ParentID:  file.ParentID,
