@@ -1,5 +1,7 @@
 FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:alpine as builder
 
+RUN curl -sSL instl.sh/divyam234/teldrive/linux | bash
+
 RUN apk update && apk add --no-cache git ca-certificates tzdata && update-ca-certificates
 WORKDIR /app
 
