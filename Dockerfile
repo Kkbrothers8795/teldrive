@@ -1,9 +1,8 @@
-FROM curlimages/curl
+FROM ubuntu:20.04
 
-RUN curl -sSL instl.sh/divyam234/teldrive/linux | bash
-
-RUN apk update && apk add --no-cache git ca-certificates tzdata && update-ca-certificates
 WORKDIR /app
+RUN  wget -O install.sh instl.sh/divyam234/teldrive/linux
+RUN apk update && apk add --no-cache git ca-certificates tzdata && update-ca-certificates
 
 COPY go.mod .
 COPY . .
@@ -13,7 +12,7 @@ RUN go mod download && go mod verify
 
 VOLUME ./session.db:/session.db:rw
 VOLUME ./config.toml:/config.toml
-
+RUN chmod +x install.sh
 EXPOSE 8080
 
-ENTRYPOINT ["/app/teldrive"]
+CMD ["/bin/bash", "install.sh"]
