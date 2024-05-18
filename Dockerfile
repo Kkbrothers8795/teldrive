@@ -30,4 +30,4 @@ COPY --from=builder /app/teldrive /app/teldrive
 
 EXPOSE 8080
 
-ENTRYPOINT ["/app/teldrive"]
+ENTRYPOINT ["/teldrive"]
