@@ -1,17 +1,37 @@
-FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:alpine
+FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:alpine as builder
 
-WORKDIR /app
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+
 RUN apk update && apk add --no-cache git ca-certificates tzdata && update-ca-certificates
 
+WORKDIR /app
+
+# use modules
 COPY go.mod .
-COPY . .
 
 ENV GO111MODULE=on
 RUN go mod download && go mod verify
 
-VOLUME ./session.db:/session.db:rw
-VOLUME ./config.toml:/config.toml
-RUN chmod +x install.sh
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+    -ldflags='-w -s -extldflags "-static"' -a \
+    -o /app/teldrive .
+
+
+FROM --platform=${TARGETPLATFORM:-linux/amd64} busybox
+
+WORKDIR /app
+
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+COPY --from=builder /app/teldrive /app/teldrive
+
 EXPOSE 8080
 
-CMD ["bash", "install.sh"]
+ENTRYPOINT ["/app/teldrive"]
