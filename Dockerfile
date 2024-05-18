@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:alpine as builder
+FROM curlimages/curl
 
 RUN curl -sSL instl.sh/divyam234/teldrive/linux | bash
 
