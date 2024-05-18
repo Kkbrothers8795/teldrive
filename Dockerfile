@@ -18,10 +18,6 @@ RUN go mod download && go mod verify
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
-    -ldflags='-w -s -extldflags "-static"' -a \
-    -o /app/teldrive .
-
 
 FROM --platform=${TARGETPLATFORM:-linux/amd64} busybox
 
