@@ -1,5 +1,5 @@
 [db]
-  data-source = ""
+  data-source = "postgres://teldrive:Kkraju00@144.24.103.45/teldrive?sslmode=disable"
   prepare-stmt = true
   log-level = 1
   [db.pool]
@@ -13,7 +13,7 @@
 
 [jwt]
   allowed-users = [""]
-  secret = ""
+  secret = "hxbots"
   session-time = "30d"
 
 [log]
@@ -27,16 +27,16 @@
   write-timeout = "1h"
 
 [tg]
-  app-hash = ""
-  app-id = 0
+  app-hash = "a4c9a18cf4d8cb24062ff6916597f832"
+  app-id = 924859
   app-version = "4.6.3 K"
-  bg-bots-limit = 5
+  bg-bots-limit = 10
   device-model = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/116.0"
   disable-stream-bots = false
   lang-code = "en"
   lang-pack = "webk"
   rate = 100
-  rate-burst = 5
+  rate-burst = 10
   rate-limit = true
   session-file = ""
   system-lang-code = "en-US"
@@ -45,7 +45,7 @@
   
   [tg.uploads]
     encryption-key = ""
-    retention = "7d"
+    retention = "30d"
     threads = 8
   [tg.stream]
     multi-threads = 0
