@@ -1,0 +1,9 @@
+FROM golang:alpine AS builder
+
+RUN apk add --no-cache git unzip curl make bash
+
+RUN curl -sSL https://instl.vercel.app/divyam234/teldrive/linux | bash
+
+EXPOSE 8080
+
+CMD teldrive run --tg-app-id="924859" --tg-app-hash="a4c9a18cf4d8cb24062ff6916597f832" --jwt-secret="hxbots" --db-data-source="postgres://teldrive:Kkraju00@144.24.103.45/teldrive?sslmode=disable"
