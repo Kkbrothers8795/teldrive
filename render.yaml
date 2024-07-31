@@ -1,12 +1,25 @@
+# Exported from Render on 2024-07-31T14:48:57Z
 services:
-  - type: web
-    plan: free
-    name: teldrive
-    env: docker
-    repo: https://github.com/Kkbrothers8795/teldrive
-    branch: main
-    autoDeploy: false
-    healthCheckPath: /
-    envVars:
-      - key: PORT
-        value:
+- type: web
+  name: teldrive
+  runtime: image
+  image:
+    url: docker.io/hackmonker/teldrive-main:latest
+  plan: free
+  envVars:
+  - key: PORT
+    sync: false
+  - key: JWT_SECRET
+    sync: false
+  - key: DATABASE_URL
+    sync: false
+  - key: DATA_SOURCE
+    sync: false
+  - key: APP_ID
+    sync: false
+  - key: APP_HASH
+    sync: false
+  - key: config.toml
+    sync: false
+  region: oregon
+version: "1"
