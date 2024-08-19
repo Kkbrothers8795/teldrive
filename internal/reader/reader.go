@@ -2,137 +2,146 @@ package reader
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/divyam234/teldrive/internal/cache"
 	"github.com/divyam234/teldrive/internal/config"
 	"github.com/divyam234/teldrive/internal/tgc"
+	"github.com/divyam234/teldrive/pkg/schemas"
 	"github.com/divyam234/teldrive/pkg/types"
+	"github.com/gotd/td/tg"
 )
 
-func calculatePartByteRanges(startByte, endByte, partSize int64) []types.Range {
-
-	partByteRanges := []types.Range{}
-
-	startPart := startByte / partSize
-
-	endPart := endByte / partSize
-
-	startOffset := startByte % partSize
-
-	for part := startPart; part <= endPart; part++ {
-		partStartByte := int64(0)
-		partEndByte := partSize - 1
-		if part == startPart {
-			partStartByte = startOffset
-		}
-		if part == endPart {
-			partEndByte = int64(endByte % partSize)
-		}
-		partByteRanges = append(partByteRanges, types.Range{Start: partStartByte, End: partEndByte, PartNo: part})
-
-		startOffset = 0
-	}
-
-	return partByteRanges
+type Range struct {
+	Start, End int64
+	PartNo     int64
 }
 
-type linearReader struct {
+type LinearReader struct {
 	ctx         context.Context
+	file        *schemas.FileOutFull
 	parts       []types.Part
-	ranges      []types.Range
+	ranges      []Range
 	pos         int
 	reader      io.ReadCloser
-	limit       int64
+	remaining   int64
 	config      *config.TGConfig
-	channelId   int64
 	worker      *tgc.StreamWorker
-	client      *tgc.Client
-	fileId      string
+	client      *tg.Client
 	concurrency int
 	cache       cache.Cacher
 }
 
+func calculatePartByteRanges(start, end, partSize int64) []Range {
+	ranges := make([]Range, 0)
+	startPart := start / partSize
+	endPart := end / partSize
+
+	for part := startPart; part <= endPart; part++ {
+		partStart := max(start-part*partSize, 0)
+		partEnd := min(partSize-1, end-part*partSize)
+		ranges = append(ranges, Range{
+			Start:  partStart,
+			End:    partEnd,
+			PartNo: part,
+		})
+	}
+	return ranges
+}
+
 func NewLinearReader(ctx context.Context,
-	fileId string,
-	parts []types.Part,
-	start, end int64,
-	channelId int64,
-	config *config.TGConfig,
-	concurrency int,
-	client *tgc.Client,
+	client *tg.Client,
 	worker *tgc.StreamWorker,
 	cache cache.Cacher,
-) (reader io.ReadCloser, err error) {
+	file *schemas.FileOutFull,
+	parts []types.Part,
+	start,
+	end int64,
+	config *config.TGConfig,
+	concurrency int,
+) (io.ReadCloser, error) {
 
-	r := &linearReader{
+	r := &LinearReader{
 		ctx:         ctx,
 		parts:       parts,
-		limit:       end - start + 1,
+		file:        file,
+		remaining:   end - start + 1,
 		ranges:      calculatePartByteRanges(start, end, parts[0].Size),
 		config:      config,
 		client:      client,
 		worker:      worker,
-		channelId:   channelId,
-		fileId:      fileId,
 		concurrency: concurrency,
 		cache:       cache,
 	}
 
-	r.reader, err = r.nextPart()
-
-	if err != nil {
+	if err := r.initializeReader(); err != nil {
 		return nil, err
 	}
-
 	return r, nil
 }
 
-func (r *linearReader) Read(p []byte) (int, error) {
-
-	if r.limit <= 0 {
+func (r *LinearReader) Read(p []byte) (int, error) {
+	if r.remaining <= 0 {
 		return 0, io.EOF
 	}
 
 	n, err := r.reader.Read(p)
+	r.remaining -= int64(n)
 
-	if err == io.EOF {
-		if r.limit > 0 {
-			err = nil
-			if r.reader != nil {
-				r.reader.Close()
-			}
+	if err == io.EOF && r.remaining > 0 {
+		if err := r.moveToNextPart(); err != nil {
+			return n, err
 		}
-		r.pos++
-		if r.pos < len(r.ranges) {
-			r.reader, err = r.nextPart()
-
-		}
+		err = nil
 	}
-	r.limit -= int64(n)
+
 	return n, err
 }
 
-func (r *linearReader) nextPart() (io.ReadCloser, error) {
-
-	start := r.ranges[r.pos].Start
-	end := r.ranges[r.pos].End
-
-	chunkSrc := &chunkSource{channelId: r.channelId, worker: r.worker,
-		fileId: r.fileId, partId: r.parts[r.ranges[r.pos].PartNo].ID,
-		client: r.client, concurrency: r.concurrency, cache: r.cache}
-	if r.concurrency < 2 {
-		return newTGReader(r.ctx, start, end, chunkSrc)
-	}
-	return newTGMultiReader(r.ctx, start, end, r.config, chunkSrc)
-
-}
-
-func (r *linearReader) Close() (err error) {
+func (r *LinearReader) Close() error {
 	if r.reader != nil {
-		err = r.reader.Close()
+		err := r.reader.Close()
 		r.reader = nil
 		return err
 	}
 	return nil
+}
+
+func (r *LinearReader) initializeReader() error {
+	reader, err := r.getPartReader()
+	if err != nil {
+		return err
+	}
+	r.reader = reader
+	return nil
+}
+
+func (r *LinearReader) moveToNextPart() error {
+	r.reader.Close()
+	r.pos++
+	if r.pos < len(r.ranges) {
+		return r.initializeReader()
+	}
+	return io.EOF
+}
+
+func (r *LinearReader) getPartReader() (io.ReadCloser, error) {
+	currentRange := r.ranges[r.pos]
+	partID := r.parts[currentRange.PartNo].ID
+
+	chunkSrc := &chunkSource{
+		channelID:   r.file.ChannelID,
+		partID:      partID,
+		client:      r.client,
+		concurrency: r.concurrency,
+		cache:       r.cache,
+		key:         fmt.Sprintf("files:location:%s:%d", r.file.Id, partID),
+		worker:      r.worker,
+	}
+
+	if r.concurrency < 2 {
+		return newTGReader(r.ctx, currentRange.Start, currentRange.End, chunkSrc)
+	}
+	return newTGMultiReader(r.ctx, currentRange.Start, currentRange.End, r.config, chunkSrc)
 }

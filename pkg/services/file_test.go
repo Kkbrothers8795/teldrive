@@ -20,7 +20,7 @@ type FileServiceSuite struct {
 
 func (s *FileServiceSuite) SetupSuite() {
 	s.db = database.NewTestDatabase(s.T(), false)
-	s.srv = NewFileService(s.db, nil, nil, nil)
+	s.srv = NewFileService(s.db, nil, nil, nil, nil, nil, nil)
 }
 
 func (s *FileServiceSuite) SetupTest() {
@@ -31,7 +31,6 @@ func (s *FileServiceSuite) SetupTest() {
 		MimeType: "drive/folder",
 		UserID:   123456,
 		Status:   "active",
-		ParentID: "root",
 	})
 }
 
@@ -77,7 +76,6 @@ func (s *FileServiceSuite) Test_Update() {
 	s.NoError(err.Error)
 	data := &schemas.FileUpdate{
 		Name: "file3.jpeg",
-		Type: "file",
 	}
 	r, err := s.srv.UpdateFile(res.Id, 123456, data)
 	s.NoError(err.Error)

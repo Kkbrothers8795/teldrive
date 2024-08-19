@@ -46,11 +46,11 @@ type TestSuite struct {
 
 func (suite *TestSuite) SetupTest() {
 	suite.config = &config.TGConfig{Stream: struct {
-		BotsOffset   int
+		BotsLimit    int
 		MultiThreads int
 		Buffers      int
 		ChunkTimeout time.Duration
-	}{BotsOffset: 1, MultiThreads: 8, Buffers: 10, ChunkTimeout: 1 * time.Second}}
+	}{MultiThreads: 8, Buffers: 10, ChunkTimeout: 1 * time.Second}}
 }
 
 func (suite *TestSuite) TestFullRead() {
@@ -92,7 +92,7 @@ func (suite *TestSuite) TestTimeout() {
 	assert.NoError(suite.T(), err)
 	test_data, err := io.ReadAll(reader)
 	assert.Greater(suite.T(), len(test_data), 0)
-	assert.Equal(suite.T(), err, ErrorStreamAbandoned)
+	assert.Equal(suite.T(), err, ErrStreamAbandoned)
 }
 
 func (suite *TestSuite) TestClose() {

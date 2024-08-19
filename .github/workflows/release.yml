@@ -4,7 +4,7 @@ on:
   push:
     tags:
       - "*"
-      
+
 permissions: write-all
 
 jobs:
@@ -42,7 +42,6 @@ jobs:
           cd ..
           mv teldrive-ui/dist ui/dist
           rm -rf teldrive-ui
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
