@@ -1,5 +1,5 @@
 [db]
-  data-source = "postgres://teldrive:Kkraju00@144.24.103.45/teldrive?sslmode=disable"
+  data-source = "postgres://teldriveuser:Kkraju00a@146.56.52.50/teldrive?sslmode=disable"
   prepare-stmt = true
   log-level = 1
   [db.pool]
@@ -41,7 +41,7 @@
   session-file = ""
   system-lang-code = "en-US"
   system-version = "Win32"
-  proxy= "http://127.0.0.1:8080"
+  proxy= ""
   
   [tg.uploads]
     encryption-key = ""
