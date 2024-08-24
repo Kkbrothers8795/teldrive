@@ -23,14 +23,14 @@ jobs:
       uses: docker/login-action@v2
       with:
         registry: https://index.docker.io/v1/
-        username: ${{ secrets.AzureAppService_ContainerUsername_dda26d434e9d43309e8425b263d40faa }}
-        password: ${{ secrets.AzureAppService_ContainerPassword_f93e6fe274b7445ab0b8dcef5d4ecd4c }}
+        username: ${{ secrets.AzureAppService_ContainerUsername_7a21ae991a3d4f659a99251dc519b95c }}
+        password: ${{ secrets.AzureAppService_ContainerPassword_c85361f9ecab464597a137f2158bf7e5 }}
 
     - name: Build and push container image to registry
       uses: docker/build-push-action@v3
       with:
         push: true
-        tags: index.docker.io/${{ secrets.AzureAppService_ContainerUsername_dda26d434e9d43309e8425b263d40faa }}/teldrive:${{ github.sha }}
+        tags: index.docker.io/${{ secrets.AzureAppService_ContainerUsername_7a21ae991a3d4f659a99251dc519b95c }}/teldrive:${{ github.sha }}
         file: ./Dockerfile
 
   deploy:
@@ -47,5 +47,5 @@ jobs:
       with:
         app-name: 'teldrive'
         slot-name: 'production'
-        publish-profile: ${{ secrets.AzureAppService_PublishProfile_2e372244c0ed4962b7a2272d143cf13d }}
-        images: 'index.docker.io/${{ secrets.AzureAppService_ContainerUsername_dda26d434e9d43309e8425b263d40faa }}/teldrive:${{ github.sha }}'
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_cadbda3e4412419bbdb5c7f20a185c38 }}
+        images: 'index.docker.io/${{ secrets.AzureAppService_ContainerUsername_7a21ae991a3d4f659a99251dc519b95c }}/teldrive:${{ github.sha }}'
