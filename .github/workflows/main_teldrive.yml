@@ -30,7 +30,7 @@ jobs:
       uses: docker/build-push-action@v3
       with:
         push: true
-        tags: index.docker.io/${{ secrets.AzureAppService_ContainerUsername_b8d31964f9914879b29bc23bb7e2c747 }}/teldrive:${{ github.sha }}
+        tags: index.docker.io/${{ secrets.AzureAppService_ContainerUsername_b8d31964f9914879b29bc23bb7e2c747 }}/teldrive:latest
         file: ./Dockerfile
 
   deploy:
