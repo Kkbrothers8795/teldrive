@@ -22,7 +22,7 @@
 
 [server]
   graceful-shutdown = "15s"
-  port = 8080
+  port = 80
   read-timeout = "1h"
   write-timeout = "1h"
 
